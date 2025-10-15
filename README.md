@@ -54,28 +54,35 @@ With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (
 
 ## Why these settings?
 
-- **Nemotron‑specific requirement:** `mamba-ssm-cache-dtype: float32` dramatically affects quality on Nemotron‑Nano‑12B‑v2. This is enforced in `config.yaml` so you can’t forget it.
-- **12B on RTX 5090:** Plenty of VRAM → run **full precision**, large context (`max-model-len: 131072`), and moderate concurrency (`max-num-seqs: 64`). Adjust if you host multiple models.
-- **Decoding defaults:** We pin **temperature 0.6 / top_p 0.95** for reasoning‑friendly behavior, plus **top_k**, penalties, and sensible output limits. OpenWebUI can still set `temperature`/`top_p`; the rest stays server‑side.
-- **Network stance:** Bind to loopback by default (`127.0.0.1:8000`). If you need LAN access, change the port mapping in `run_vllm.sh` to publish on a reachable interface or the Docker bridge (see OpenWebUI notes).
+* **Nemotron‑specific requirement:** `mamba-ssm-cache-dtype: float32` dramatically affects quality on Nemotron‑Nano‑12B‑v2. This is enforced in `config.yaml` so you can’t forget it.
+* **Large context with realistic concurrency:** The config sets `max-model-len: 131072` (≈128K tokens) and **`max-num-seqs: 1`**. With 12B params on an RTX 5090 and full‑precision weights, this leaves ~4–5 GiB for KV cache at startup, which practically limits safe concurrency to ~1 request at 128K context.
+* **Decoding defaults:** We pin **temperature 0.6 / top_p 0.95 / top_k 50**, with neutral repetition/presence/frequency penalties and a generous `max_new_tokens` default (131072). Clients can override per‑request; the server supplies sensible fallback behavior.
+* **Network stance:** The containerized vLLM server listens on `0.0.0.0:8000` **inside the container**, but the Docker publish in `run_vllm.sh` maps it to **`127.0.0.1:8000` on the host**, keeping it local‑only by default. Change `BIND` in the script if you need LAN access (see `OPENWEBUI_SETUP.md`).
+
+### Notes about the NVIDIA vLLM image
+
+* **Flash‑Attention backend** is used automatically on Blackwell; no extra flags required.
+* **Mamba engine log line:** You’ll see a log like “Mamba is experimental on VLLM_USE_V1=1. Falling back to V0 Engine.” That’s expected with this image/version and fine for Nemotron‑v2.
+* **Chunked prefill:** vLLM auto‑enables it for contexts larger than 32K and will warn that it “might not work with some features/models.” Leave it on unless you observe issues; then relaunch with `--enable-chunked-prefill=False`.
 
 ---
 
 ## Compatibility notes
 
 - Uses **NVIDIA vLLM container** (`nvcr.io/nvidia/vllm:25.09-py3`) built for **CUDA 13** and **Blackwell** (RTX 50‑series). No wheel rebuilds, no mismatched compute capability issues.
-- Assumes you already installed the **NVIDIA Container Toolkit** and your driver shows the GPU inside containers via `--gpus all`.
+- Assumes you already installed the **NVIDIA Container Toolkit** and your driver exposes the GPU inside containers via `--gpus all`.
 
 ---
 
 ## Operating the server (start / stop / pause)
 
 ### Check status
+
 ```bash
 docker ps
 curl -s http://127.0.0.1:8000/v1/models | jq .
 docker logs -f nemotron_vllm
-````
+```
 
 ### Stop (frees VRAM)
 
