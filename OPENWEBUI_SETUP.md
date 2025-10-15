@@ -11,9 +11,11 @@ docker run -d   -p 127.0.0.1:3000:8080   --add-host=host.docker.internal:host-ga
 
 ## 2) Point OpenWebUI to vLLM
 
-- Provider: **OpenAI Compatible**
-- Base URL: `http://host.docker.internal:8000` (instead of default value: `https://api.openai.com/v1`)
-- API Key: any non-empty string (e.g., `test`)
+In OpenWebUI admin settings: http://127.0.0.1:3000/admin/settings/connections go to: `OpenAI API` -> `Edit Connection` and set:
+
+- Base URL: `http://host.docker.internal:8000/v1` (instead of default value: `https://api.openai.com/v1`)
+- Internal/external: Internal
+- API Key: Empty
 - Model name: `nvidia/NVIDIA-Nemotron-Nano-12B-v2`
 
 This keeps both containers on loopback while still allowing OpenWebUI to reach vLLM via the Docker host gateway.
