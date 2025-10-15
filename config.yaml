@@ -7,25 +7,33 @@ trust-remote-code: true
 host: "0.0.0.0"
 port: 8000
 
-# Nemotron/Blackwell specifics
-mamba-ssm-cache-dtype: "float32"   # REQUIRED for quality on Nemotron v2
+# ---- Nemotron / Blackwell specifics ----
+# IMPORTANT for Nemotron v2 quality with Mamba-SSM layers
+mamba-ssm-cache-dtype: "float32"
+
+# Max context length (prompt + generated). 131072 == 128K tokens.
 max-model-len: 131072
+
+# Concurrency; tune based on VRAM. (64 is fine to start; lower if you OOM.)
 max-num-seqs: 64
 
 # ---- Defaults source + overrides ----
-# Use only the overrides below as the authoritative defaults.
+# Use vLLM's built-ins, then replace with our overrides below.
 generation-config: "vllm"
 
-override-generation-config:
-  # Core sampling (reasoning-friendly)
-  temperature: 0.6
-  top_p: 0.95
-  top_k: 50
-  repetition_penalty: 1.0
-  presence_penalty: 0.0
-  frequency_penalty: 0.0
+# vLLM expects a JSON string here (not a YAML map).
+# We set a one-shot, reasoning-friendly default; clients can still override.
+override-generation-config: >
+  {
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "top_k": 50,
+    "repetition_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "frequency_penalty": 0.0,
 
-  # Output limits / behavior
-  max_tokens: 1024
-  n: 1
-  best_of: 1
+    // HARD CAP on server-side generation length:
+    // Set to ~128K so the server won't clip long generations.
+    // Actual usable max per request is: max_new_tokens <= max-model-len - prompt_tokens.
+    "max_new_tokens": 131072
+  }
