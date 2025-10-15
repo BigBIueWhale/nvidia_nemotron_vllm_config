@@ -4,7 +4,7 @@ set -Eeuo pipefail
 # Create a persistent vLLM container for Nemotron‑Nano‑12B‑v2.
 # Not a system service; just a normal docker container you can start/stop.
 
-IMAGE="nvcr.io/nvidia/vllm:25.09"
+IMAGE="nvcr.io/nvidia/vllm:25.09-py3"
 NAME="nemotron_vllm"
 PORT="8000"             # container port (OpenAI-compatible API)
 BIND="127.0.0.1"        # change to 0.0.0.0 for LAN exposure
