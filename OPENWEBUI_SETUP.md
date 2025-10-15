@@ -14,7 +14,7 @@ docker run -d   -p 127.0.0.1:3000:8080   --add-host=host.docker.internal:host-ga
 In OpenWebUI admin settings: http://127.0.0.1:3000/admin/settings/connections go to: `OpenAI API` -> `Edit Connection` and set:
 
 - Base URL: `http://host.docker.internal:8000/v1` (instead of default value: `https://api.openai.com/v1`)
-- Internal/external: Internal
+- Connection type: Internal
 - API Key: Empty
 - Model name: `nvidia/NVIDIA-Nemotron-Nano-12B-v2`
 
