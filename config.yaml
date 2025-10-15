@@ -14,8 +14,8 @@ mamba-ssm-cache-dtype: "float32"
 # Max context length (prompt + generated). 131072 == 128K tokens.
 max-model-len: 131072
 
-# Concurrency; tune based on VRAM. (64 is fine to start; lower if you OOM.)
-max-num-seqs: 32
+# Concurrency; tune based on VRAM. Can literally serve multiple users at once if you have enough VRAM
+max-num-seqs: 1
 
 # ---- Defaults source + overrides ----
 # Use vLLM's built-ins, then replace with our overrides below.
