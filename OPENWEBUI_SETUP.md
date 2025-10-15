@@ -12,7 +12,7 @@ docker run -d   -p 127.0.0.1:3000:8080   --add-host=host.docker.internal:host-ga
 ## 2) Point OpenWebUI to vLLM
 
 - Provider: **OpenAI Compatible**
-- Base URL: `http://host.docker.internal:8000`
+- Base URL: `http://host.docker.internal:8000` (instead of default value: `https://api.openai.com/v1`)
 - API Key: any non-empty string (e.g., `test`)
 - Model name: `nvidia/NVIDIA-Nemotron-Nano-12B-v2`
 
