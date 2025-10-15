@@ -31,9 +31,5 @@ override-generation-config: >
     "repetition_penalty": 1.0,
     "presence_penalty": 0.0,
     "frequency_penalty": 0.0,
-
-    // HARD CAP on server-side generation length:
-    // Set to ~128K so the server won't clip long generations.
-    // Actual usable max per request is: max_new_tokens <= max-model-len - prompt_tokens.
     "max_new_tokens": 131072
   }
