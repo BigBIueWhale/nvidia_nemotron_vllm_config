@@ -45,7 +45,8 @@ With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (
 
 3. **Test the endpoint:**
    ```bash
-   curl -s http://127.0.0.1:8000/v1/models | jq .
+   # From the host:
+   curl -s http://172.17.0.1:8000/v1/models | jq .
    ```
 
 4. **Hook up OpenWebUI:** see **[OPENWEBUI_SETUP.md](./OPENWEBUI_SETUP.md)**.
@@ -57,7 +58,7 @@ With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (
 * **Nemotron‑specific requirement:** `mamba-ssm-cache-dtype: float32` dramatically affects quality on Nemotron‑Nano‑12B‑v2. This is enforced in `config.yaml` so you can’t forget it.
 * **Large context with realistic concurrency:** The config sets `max-model-len: 131072` (≈128K tokens) and **`max-num-seqs: 1`**. With 12B params on an RTX 5090 and full‑precision weights, this leaves ~4–5 GiB for KV cache at startup, which practically limits safe concurrency to ~1 request at 128K context.
 * **Decoding defaults:** We pin **temperature 0.6 / top_p 0.95 / top_k 50**, with neutral repetition/presence/frequency penalties and a generous `max_new_tokens` default (131072). Clients can override per‑request; the server supplies sensible fallback behavior.
-* **Network stance:** The containerized vLLM server listens on `0.0.0.0:8000` **inside the container**, but the Docker publish in `run_vllm.sh` maps it to **`127.0.0.1:8000` on the host**, keeping it local‑only by default. Change `BIND` in the script if you need LAN access (see `OPENWEBUI_SETUP.md`).
+* The containerized vLLM server listens on `0.0.0.0:8000` **inside the container**, and the Docker publish in `run_vllm.sh` maps it to **`172.17.0.1:8000` on the host** (the Docker bridge gateway). This keeps the API reachable to containers (e.g., OpenWebUI via `host.docker.internal`) while not exposing it on your host’s primary interfaces. If you ever need LAN exposure, change `BIND` to `0.0.0.0` (see `OPENWEBUI_SETUP.md`).
 
 ### Notes about the NVIDIA vLLM image
 
@@ -80,7 +81,7 @@ With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (
 
 ```bash
 docker ps
-curl -s http://127.0.0.1:8000/v1/models | jq .
+curl -s http://172.17.0.1:8000/v1/models | jq .
 docker logs -f nemotron_vllm
 ```
 

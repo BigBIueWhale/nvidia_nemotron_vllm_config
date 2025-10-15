@@ -7,7 +7,9 @@ set -Eeuo pipefail
 IMAGE="nvcr.io/nvidia/vllm:25.09-py3"
 NAME="nemotron_vllm"
 PORT="8000"             # container port (OpenAI-compatible API)
-BIND="127.0.0.1"        # change to 0.0.0.0 for LAN exposure
+# Bind to docker port, so that it's accessible by OpenWebUI docker instance
+# instead of being exposed to entire internet.
+BIND="172.17.0.1"
 CONFIG="$(pwd)/config.yaml"
 HF_CACHE="${HOME}/.cache/huggingface"
 
