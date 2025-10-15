@@ -18,15 +18,6 @@ docker run -d   -p 127.0.0.1:3000:8080   --add-host=host.docker.internal:host-ga
 
 This keeps both containers on loopback while still allowing OpenWebUI to reach vLLM via the Docker host gateway.
 
-### Alternative (Docker bridge bind)
-If you prefer the Docker bridge (useful when OpenWebUI is on another host), change the vLLM publish in `run_vllm.sh`:
-
-```
-BIND="172.17.0.1"
-```
-
-Then use Base URL: `http://172.17.0.1:8000` inside OpenWebUI.
-
 ## 3) Suggested app settings (optional)
 
 - **LLM Providers → Default**: set to OpenAI Compatible provider above.
