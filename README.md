@@ -63,10 +63,81 @@ With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (
 
 ## Compatibility notes
 
-- Uses **NVIDIA vLLM container** (`nvcr.io/nvidia/vllm:25.09`) built for **CUDA 13** and **Blackwell** (RTX 50‑series). No wheel rebuilds, no mismatched compute capability issues.
+- Uses **NVIDIA vLLM container** (`nvcr.io/nvidia/vllm:25.09-py3`) built for **CUDA 13** and **Blackwell** (RTX 50‑series). No wheel rebuilds, no mismatched compute capability issues.
 - Assumes you already installed the **NVIDIA Container Toolkit** and your driver shows the GPU inside containers via `--gpus all`.
 
 ---
+
+## Operating the server (start / stop / pause)
+
+### Check status
+```bash
+docker ps
+curl -s http://127.0.0.1:8000/v1/models | jq .
+docker logs -f nemotron_vllm
+````
+
+### Stop (frees VRAM)
+
+> Use **stop** to fully release GPU memory.
+
+```bash
+docker stop nemotron_vllm
+```
+
+Verify with:
+
+```bash
+nvidia-smi
+```
+
+### Start (loads model and uses VRAM again)
+
+```bash
+docker start -a nemotron_vllm   # attach logs
+# or
+docker start nemotron_vllm
+```
+
+### Restart
+
+```bash
+docker restart nemotron_vllm
+```
+
+### Pause vs Stop
+
+* `docker pause` **does not free VRAM** (the process is frozen but GPU memory stays allocated).
+* `docker stop` **does free VRAM** (the process exits and releases the GPU).
+
+```bash
+docker pause nemotron_vllm
+docker unpause nemotron_vllm
+```
+
+### Auto-restart policy
+
+The container is created with `--restart unless-stopped`.
+
+* Disable auto-restart:
+
+```bash
+docker update --restart=no nemotron_vllm
+```
+
+* Re-enable:
+
+```bash
+docker update --restart=unless-stopped nemotron_vllm
+```
+
+### Remove and recreate (if you want a clean slate)
+
+```bash
+docker stop nemotron_vllm || true
+docker rm nemotron_vllm || true
+./run_vllm.sh
+```
 
 ## License
 
