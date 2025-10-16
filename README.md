@@ -5,6 +5,18 @@
 
 ---
 
+🔴🔴🔴
+
+# ⚠️ **MODEL QUALITY DISCLAIMER**
+
+**NVIDIA‑Nemotron‑Nano‑12B‑v2 performs poorly at coding tasks.** For context, even the **older *****Mistral Codestral‑22B (original, May 2024)***—practically *ancient* in LLM terms—still beats Nemotron at code. **This is an example comparison, not a recommendation to use Codestral.**
+
+This repo exists to demonstrate a vLLM server configuration for Nemotron, **not** to recommend it for code work. If you care about code quality, choose a different model that fits your needs.
+
+🔴🔴🔴
+
+---
+
 ## What this is
 
 This project pins **server‑side defaults** for vLLM so that **OpenWebUI** (or any OpenAI‑compatible client) doesn’t have to pass a dozen sampling knobs. It’s built for **my specific machine**:
