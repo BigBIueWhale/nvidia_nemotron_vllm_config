@@ -1,6 +1,6 @@
-# nemotron_vllm_autoconfig
+# qwen3_vl_32b_vllm_config
 
-> Production-ready vLLM “just works” setup for **NVIDIA Nemotron‑Nano‑12B‑v2** on **Ubuntu 24.04 LTS + RTX 5090** — tuned for my personal server and exact hardware.  
+> Production-ready vLLM “just works” setup for [Qwen3-VL-32B-Thinking (AWQ-INT4)](https://huggingface.co/cpatonn/Qwen3-VL-32B-Thinking-AWQ-4bit) on **Ubuntu 24.04 LTS + RTX 5090** — tuned for my personal server and exact hardware.  
 > Repo link: https://github.com/BigBIueWhale/personal_server
 
 ---
@@ -9,34 +9,34 @@
 
 🔴🔴🔴
 
-**NVIDIA‑Nemotron‑Nano‑12B‑v2 performs poorly at coding tasks.** For context, even the **older *****Mistral Codestral‑22B (original, May 2024)***—practically *ancient* in LLM terms—still beats Nemotron at code. **This is an example comparison, not a recommendation to use Codestral.**
+**Qwen3-VL-32B-Thinking is configured here in text-only mode (vision modules never load) to fit within 32GB VRAM on RTX 5090.** This means the VL checkpoint behaves like a plain 32B text model in memory and runtime. Any request containing images will be rejected (by design), keeping your runs deterministic and VRAM-predictable.
 
-This repo exists to demonstrate a vLLM server configuration for Nemotron, **not** to recommend it for code work. If you care about code quality, choose a different model that fits your needs.
+Thinking budget supported (default 8,192-token budget) inspired by a request-side [workaround approach](https://qwen.readthedocs.io/en/latest/getting_started/quickstart.html#thinking-budget) due to the complete lack of support of vLLM (and llama.cpp, and OpenWebUI) in thinking budget implementation.
+
+Thinking budget is crucial for us to ensure that the model has enough context length to actually respond.
 
 ---
 
 ## What this is
 
-This project pins **server‑side defaults** for vLLM so that **OpenWebUI** (or any OpenAI‑compatible client) doesn’t have to pass a dozen sampling knobs. It’s built for **my specific machine**:
+This project pins **server‑side defaults** for vLLM so that **the CLI** (or any OpenAI‑compatible client) doesn’t have to pass a dozen sampling knobs. It’s built for **my specific machine**:
 - **GPU:** RTX 5090 (Blackwell, sm_120)
 - **Driver:** 580.xx (open)  
 - **CUDA:** 13.0
 - **OS:** Ubuntu 24.04 LTS
 
-With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (no quantization)** and stays stable. We intentionally use **vLLM** (not Ollama here) because vLLM lets us hard‑code *all* decoding defaults on the server.
+With this exact combo, **Qwen3-VL-32B-Thinking (AWQ-INT4)** runs **in 4-bit quantized precision** and stays stable. We intentionally use **vLLM** (not Ollama here) because llama.cpp doesn't support Qwen3-VL yet (as of 28 October 2025). And AWQ quantizations although they require a calibration dataset, the result seems to be OK.
 
-> ⚠️ **Why custom config is needed (philosophy):** Pretty much all models **require very specific runtime flags** to behave correctly. For Nemotron v2, using the wrong defaults can make the model **quietly underperform (“silently stupid”)** without obvious errors. This repo bakes in the correct settings — notably `mamba-ssm-cache-dtype: float32` — plus conservative decoding defaults. Clients can still tweak a couple of knobs (e.g., `temperature`), but the server remains the single source of truth for everything else.
+> ⚠️ **Why custom config is needed (philosophy):** Pretty much all models **require very specific runtime flags** to behave correctly. For Qwen3-VL-32B-Thinking, using the wrong defaults can make the model **quietly underperform (“silently stupid”)** without obvious errors. This repo bakes in the correct settings — notably text-only mode with `--limit-mm-per-prompt.image 0 --limit-mm-per-prompt.video 0` — plus conservative decoding defaults. Clients can still tweak a couple of knobs (e.g., `temperature`), but the server remains the single source of truth for everything else.
 
 ---
 
 ## Contents
 
-- **[`config.yaml`](./config.yaml)** — vLLM server config. Sets the model, networking, Nemotron‑specific flags, and **complete** default decoding parameters (temperature/top‑p/top‑k/penalties/max_tokens, etc.). Clients inherit these unless they explicitly override a field.
-- **[`run_vllm.sh`](./run_vllm.sh)** — one‑shot “install” script that pulls the NVIDIA vLLM container and creates a persistent Docker container named `nemotron_vllm` with `--restart unless-stopped`. Run it once; use `docker start nemotron_vllm` on reboots.
-- **[`OPENWEBUI_SETUP.md`](./OPENWEBUI_SETUP.md)** — step‑by‑step wiring for OpenWebUI (OpenAI‑compatible backend), written in the same style as my earlier notes.
+- **[`config.yaml`](./config.yaml)** — vLLM server config. Sets the model, networking, Qwen3‑specific flags, and **complete** default decoding parameters (temperature/top‑p/top‑k/penalties/max_tokens, etc.). Clients inherit these unless they explicitly override a field.
+- **[`run_vllm.sh`](./run_vllm.sh)** — one‑shot “install” script that pulls the NVIDIA vLLM container and creates a persistent Docker container named `qwen3_vllm` with `--restart unless-stopped`. Run it once; use `docker start qwen3_vllm` on reboots.
+- **[`chat_cli.py`](./chat_cli.py)** — a simple Python CLI for multi-turn chatting with the model, supporting streaming and the thinking budget workaround (default 8192 tokens).
 - **[`UNINSTALL.md`](./UNINSTALL.md)** — how to stop/remove the container and (optionally) delete the Docker image and HF cache.
-
-![placeholder](./docs/nemotron_12b_v2_benchmarks_versus_qwen3_32b.jpeg)
 
 ---
 
@@ -59,28 +59,39 @@ With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (
    curl -s http://172.17.0.1:8000/v1/models | jq .
    ```
 
-4. **Hook up OpenWebUI:** see **[OPENWEBUI_SETUP.md](./OPENWEBUI_SETUP.md)**.
+4. **Chat with the CLI:** 
+   Install openai: `pip install openai`
+   Then run `python chat_cli.py` for thinking mode, or `python chat_cli.py --thinking-budget 0` for no thinking (although in that case I would recommend `Qwen3-VL-32B-Instruct`).
 
 ---
 
 ## Why these settings?
 
-* **Nemotron‑specific requirement:** `mamba-ssm-cache-dtype: float32` dramatically affects quality on Nemotron‑Nano‑12B‑v2. This is enforced in `config.yaml` so you can’t forget it.
-* **Large context with realistic concurrency:** The config sets `max-model-len: 131072` (≈128K tokens) and **`max-num-seqs: 1`**. With 12B params on an RTX 5090 and full‑precision weights, this leaves ~4–5 GiB for KV cache at startup, which practically limits safe concurrency to ~1 request at 128K context.
-* **Decoding defaults:** We pin **temperature 0.6 / top_p 0.95 / top_k 50**, with neutral repetition/presence/frequency penalties and a generous `max_new_tokens` default (131072). Clients can override per‑request; the server supplies sensible fallback behavior.
-* The containerized vLLM server listens on `0.0.0.0:8000` **inside the container**, and the Docker publish in `run_vllm.sh` maps it to **`172.17.0.1:8000` on the host** (the Docker bridge gateway). This keeps the API reachable to containers (e.g., OpenWebUI via `host.docker.internal`) while not exposing it on your host’s primary interfaces. If you ever need LAN exposure, change `BIND` to `0.0.0.0` (see `OPENWEBUI_SETUP.md`).
+* **Qwen3‑specific requirement:** Text-only mode (enforced in `run_vllm.sh` with `--limit-mm-per-prompt.image 0 --limit-mm-per-prompt.video 0`) prevents loading the vision tower/projector entirely, reducing static VRAM and making your attention/KV use identical to a pure 32B text model at the same context.
+* **Large context with realistic concurrency:** The config sets `max-model-len: 18000` and **`max-num-seqs: 1`**. With 32B params (AWQ-INT4) on an RTX 5090, this leaves safe headroom for KV cache at startup, which practically limits safe concurrency to ~1 request at 18k context.
+* **Decoding defaults:** We pin **temperature 1.0 / top_p 0.95 / top_k 20**, with repetition_penalty 1.0 / presence_penalty 1.5 / frequency_penalty 0.0 and a safe `max_new_tokens` default (2048). These mirror the Text preset from the model card. Clients can override per‑request; the server supplies sensible fallback behavior.
+* The containerized vLLM server listens on `0.0.0.0:8000` **inside the container**, and the Docker publish in `run_vllm.sh` maps it to **`172.17.0.1:8000` on the host** (the Docker bridge gateway). This keeps the API reachable to the host while not exposing it on your host’s primary interfaces. If you ever need LAN exposure, change `BIND` to `0.0.0.0`.
+
+### Using the CLI
+
+The `chat_cli.py` provides an interactive chat interface with support for the thinking budget workaround as described in the Qwen documentation.
+
+- Run with default thinking budget (8192 tokens): `python chat_cli.py`
+- Disable thinking: `python chat_cli.py --thinking-budget 0`
+- Custom budget: `python chat_cli.py --thinking-budget 4096`
+
+The CLI supports streaming responses and maintains conversation history for multi-turn interactions.
 
 ### Notes about the NVIDIA vLLM image
 
 * **Flash‑Attention backend** is used automatically on Blackwell; no extra flags required.
-* **Mamba engine log line:** You’ll see a log like “Mamba is experimental on VLLM_USE_V1=1. Falling back to V0 Engine.” That’s expected with this image/version and fine for Nemotron‑v2.
 * **Chunked prefill:** vLLM auto‑enables it for contexts larger than 32K and will warn that it “might not work with some features/models.” Leave it on unless you observe issues; then relaunch with `--enable-chunked-prefill=False`.
 
 ---
 
 ## Compatibility notes
 
-- Uses **NVIDIA vLLM container** (`nvcr.io/nvidia/vllm:25.09-py3`) built for **CUDA 13** and **Blackwell** (RTX 50‑series). No wheel rebuilds, no mismatched compute capability issues.
+- Uses **NVIDIA vLLM container** (`nvcr.io/nvidia/vllm:25.10-py3`) built for **CUDA 13** and **Blackwell** (RTX 50‑series). No wheel rebuilds, no mismatched compute capability issues.
 - Assumes you already installed the **NVIDIA Container Toolkit** and your driver exposes the GPU inside containers via `--gpus all`.
 
 ---
@@ -92,7 +103,7 @@ With this exact combo, **Nemotron‑Nano‑12B‑v2** runs **in full precision (
 ```bash
 docker ps
 curl -s http://172.17.0.1:8000/v1/models | jq .
-docker logs -f nemotron_vllm
+docker logs -f qwen3_vllm
 ```
 
 ### Stop (frees VRAM)
@@ -100,7 +111,7 @@ docker logs -f nemotron_vllm
 > Use **stop** to fully release GPU memory.
 
 ```bash
-docker stop nemotron_vllm
+docker stop qwen3_vllm
 ```
 
 Verify with:
@@ -112,15 +123,15 @@ nvidia-smi
 ### Start (loads model and uses VRAM again)
 
 ```bash
-docker start -a nemotron_vllm   # attach logs
+docker start -a qwen3_vllm   # attach logs
 # or
-docker start nemotron_vllm
+docker start qwen3_vllm
 ```
 
 ### Restart
 
 ```bash
-docker restart nemotron_vllm
+docker restart qwen3_vllm
 ```
 
 ### Pause vs Stop
@@ -129,8 +140,8 @@ docker restart nemotron_vllm
 * `docker stop` **does free VRAM** (the process exits and releases the GPU).
 
 ```bash
-docker pause nemotron_vllm
-docker unpause nemotron_vllm
+docker pause qwen3_vllm
+docker unpause qwen3_vllm
 ```
 
 ### Auto-restart policy
@@ -140,20 +151,20 @@ The container is created with `--restart unless-stopped`.
 * Disable auto-restart:
 
 ```bash
-docker update --restart=no nemotron_vllm
+docker update --restart=no qwen3_vllm
 ```
 
 * Re-enable:
 
 ```bash
-docker update --restart=unless-stopped nemotron_vllm
+docker update --restart=unless-stopped qwen3_vllm
 ```
 
 ### Remove and recreate (if you want a clean slate)
 
 ```bash
-docker stop nemotron_vllm || true
-docker rm nemotron_vllm || true
+docker stop qwen3_vllm || true
+docker rm qwen3_vllm || true
 ./run_vllm.sh
 ```
 

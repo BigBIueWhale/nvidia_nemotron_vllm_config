@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Create a persistent vLLM container for Nemotron‑Nano‑12B‑v2.
+# Create a persistent vLLM container for Qwen3-VL-32B-Thinking (AWQ-INT4).
 # Not a system service; just a normal docker container you can start/stop.
 
-IMAGE="nvcr.io/nvidia/vllm:25.09-py3"
-NAME="nemotron_vllm"
+IMAGE="nvcr.io/nvidia/vllm:25.10-py3"
+NAME="qwen3_vllm"
 PORT="8000"             # container port (OpenAI-compatible API)
 # Bind to docker port, so that it's accessible by OpenWebUI docker instance
 # instead of being exposed to entire internet.
@@ -40,7 +40,9 @@ docker create \
   -v "${HF_CACHE}:/root/.cache/huggingface" \
   -e "HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}" \
   "${IMAGE}" \
-  vllm serve --config /workspace/config.yaml
+  vllm serve --config /workspace/config.yaml \
+    --limit-mm-per-prompt.image 0 \
+    --limit-mm-per-prompt.video 0
 
 echo "Starting ${NAME} ..."
 docker start -a "${NAME}"
