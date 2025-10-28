@@ -1,24 +1,21 @@
-# vLLM server config for Qwen3-VL-32B-Thinking (AWQ-INT4) on RTX 5090 (Text-only mode)
+# vLLM server config for Nemotron-Nano-12B-v2 on RTX 5090
 # This file is loaded by `vllm serve --config /workspace/config.yaml`
 
 # ---- Model & server ----
-model: "cpatonn/Qwen3-VL-32B-Thinking-AWQ-4bit"
+model: "nvidia/NVIDIA-Nemotron-Nano-12B-v2"
 trust-remote-code: true
 host: "0.0.0.0"
 port: 8000
 
-# ---- Reasoning (Qwen3) ----
-enable-reasoning: true
-reasoning-parser: "qwen3"
+# ---- Nemotron / Blackwell specifics ----
+# IMPORTANT for Nemotron v2 quality with Mamba-SSM layers
+mamba-ssm-cache-dtype: "float32"
 
-# ---- Context / concurrency ----
-# Should fit on 32GB VRAM- 18,000 tokens total (prompt + output).
-max-model-len: 18000
+# Max context length (prompt + generated). 131072 == 128K tokens.
+max-model-len: 131072
+
+# Concurrency; tune based on VRAM. Can literally serve multiple users at once if you have enough VRAM
 max-num-seqs: 1
-
-# ---- GPU / memory ----
-# Leaves safe headroom on a 5090 for KV growth + fragmentation.
-gpu-memory-utilization: 0.92
 
 # ---- Defaults source + overrides ----
 # Use vLLM's built-ins, then replace with our overrides below.
@@ -28,11 +25,11 @@ generation-config: "vllm"
 # We set a one-shot, reasoning-friendly default; clients can still override.
 override-generation-config: >
   {
-    "temperature": 1.0,
+    "temperature": 0.6,
     "top_p": 0.95,
-    "top_k": 20,
+    "top_k": 50,
     "repetition_penalty": 1.0,
-    "presence_penalty": 1.5,
+    "presence_penalty": 0.0,
     "frequency_penalty": 0.0,
-    "max_new_tokens": 2048
+    "max_new_tokens": 131072
   }
